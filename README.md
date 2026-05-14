@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>University System FIXED PRO</title>
+
+<style>
+body{
+font-family:Arial;
+background:linear-gradient(to right,#667eea,#764ba2);
+color:white;
+text-align:center;
+}
+
+.card{
+background:white;
+color:black;
+width:92%;
+margin:20px auto;
+padding:20px;
+border-radius:12px;
+display:none;
+}
+
+input{
+padding:8px;
+margin:5px;
+}
+
+button{
+padding:8px;
+margin:5px;
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+td,th{
+border:1px solid black;
+padding:6px;
+}
+
+img{
+width:80px;
+height:80px;
+border-radius:50%;
+object-fit:cover;
+border:2px solid #4a00e0;
+}
+
+/* LOGIN */
+#loginBox{
+background:white;
+color:black;
+width:320px;
+margin:120px auto;
+padding:20px;
+border-radius:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🔐 LOGIN -->
+<div id="loginBox">
+<h2>🔐 Admin Login</h2>
+
+<input id="pass" type="password" placeholder="Enter Password">
+<br>
+
+<button onclick="login()">Login</button>
+<button onclick="setPassword()">Set Password</button>
+
+<p id="msg"></p>
+</div>
+
+<!-- SYSTEM -->
+<div id="system" style="display:none;">
+
+<h1>🎓 University System</h1>
+
+<button onclick="showAdmin()">Admin</button>
+<button onclick="showStudent()">Student</button>
+<button onclick="logout()">Logout</button>
+
+<button onclick="changePassword()">Change Password</button>
+
+<!-- ADMIN -->
+<div id="admin" class="card">
+
+<h2>🏫 Course Info</h2>
+
+<input id="dept" placeholder="Department">
+<input id="subject" placeholder="Subject">
+<input id="batch" placeholder="Batch">
+<input id="year" placeholder="Year">
+<input id="teacher" placeholder="Teacher">
+
+<br>
+
+<button onclick="saveCourse()">Save Course</button>
+<button onclick="refreshCourse()">Refresh Course</button>
+
+<p id="courseShow"></p>
+
+<hr>
+
+<h2>👨‍🎓 Student Panel</h2>
+
+<input id="name" placeholder="Student Name">
+<input id="id" placeholder="Student ID">
+
+<br>
+
+📸 <input type="file" id="imageInput">
+
+<h4>Assignments</h4>
+<input id="a1"><input id="a2"><input id="a3"><input id="a4">
+
+<h4>Quizzes</h4>
+<input id="q1"><input id="q2"><input id="q3"><input id="q4">
+
+<h4>Mid / Final</h4>
+<input id="mid"><input id="final">
+
+<br>
+
+<button onclick="saveStudent()">Save</button>
+<button onclick="updateStudent()" style="background:orange;">Update</button>
+<button onclick="refreshStudents()">Refresh</button>
+
+<table id="table"></table>
+
+</div>
+
+<!-- STUDENT -->
+<div id="student" class="card">
+
+<h2>Student Dashboard</h2>
+
+<input id="searchId" placeholder="Enter ID">
+<button onclick="searchStudent()">Search</button>
+
+<div id="result"></div>
+
+</div>
+
+</div>
+
+<script>
+
+/* ✅ FIX: PROPER DOM REFERENCES (MAIN BUG FIX) */
+const name = document.getElementById("name");
+const id = document.getElementById("id");
+
+const dept = document.getElementById("dept");
+const subject = document.getElementById("subject");
+const batch = document.getElementById("batch");
+const year = document.getElementById("year");
+const teacher = document.getElementById("teacher");
+
+const a1 = document.getElementById("a1");
+const a2 = document.getElementById("a2");
+const a3 = document.getElementById("a3");
+const a4 = document.getElementById("a4");
+
+const q1 = document.getElementById("q1");
+const q2 = document.getElementById("q2");
+const q3 = document.getElementById("q3");
+const q4 = document.getElementById("q4");
+
+const mid = document.getElementById("mid");
+const final = document.getElementById("final");
+
+const table = document.getElementById("table");
+const result = document.getElementById("result");
+const searchId = document.getElementById("searchId");
+
+const pass = document.getElementById("pass");
+const msg = document.getElementById("msg");
+const loginBox = document.getElementById("loginBox");
+const system = document.getElementById("system");
+const admin = document.getElementById("admin");
+const student = document.getElementById("student");
+const imageInput = document.getElementById("imageInput");
+const courseShow = document.getElementById("courseShow");
+
+/* DATA */
+let students = JSON.parse(localStorage.getItem("students")) || [];
+let course = JSON.parse(localStorage.getItem("course")) || {};
+let editIndex = -1;
+let imageData = "";
+
+/* LOGIN */
+let savedPass = localStorage.getItem("adminPass");
+
+if(!savedPass){
+msg.innerText = "Set first admin password!";
+}
+
+function setPassword(){
+let p = pass.value;
+if(!p){ alert("Enter password"); return; }
+
+localStorage.setItem("adminPass",p);
+alert("Password Set!");
+}
+
+function login(){
+let p = pass.value;
+savedPass = localStorage.getItem("adminPass");
+
+if(p === savedPass){
+loginBox.style.display="none";
+system.style.display="block";
+showAdmin();
+}else{
+msg.innerText="Wrong Password!";
+}
+}
+
+function logout(){
+location.reload();
+}
+
+/* SWITCH */
+function showAdmin(){
+admin.style.display="block";
+student.style.display="none";
+display();
+showCourse();
+}
+
+function showStudent(){
+student.style.display="block";
+admin.style.display="none";
+}
+
+/* IMAGE */
+imageInput.addEventListener("change",(e)=>{
+let file = e.target.files[0];
+let reader = new FileReader();
+reader.onload = ()=> imageData = reader.result;
+reader.readAsDataURL(file);
+});
+
+/* COURSE */
+function saveCourse(){
+course = {
+dept:dept.value,
+subject:subject.value,
+batch:batch.value,
+year:year.value,
+teacher:teacher.value
+};
+
+localStorage.setItem("course",JSON.stringify(course));
+alert("Course Saved!");
+showCourse();
+}
+
+function refreshCourse(){
+course = JSON.parse(localStorage.getItem("course")) || {};
+showCourse();
+}
+
+function showCourse(){
+courseShow.innerHTML =
+`<b>${course.dept||""}</b> | ${course.subject||""} | ${course.batch||""} | ${course.year||""} | ${course.teacher||""}`;
+}
+
+/* SAVE STUDENT */
+function saveStudent(){
+
+let s = getData();
+
+if(!s.name || !s.id){
+alert("Name & ID required!");
+return;
+}
+
+students.push(s);
+localStorage.setItem("students",JSON.stringify(students));
+
+alert("Saved!");
+clearForm();
+display();
+}
+
+/* UPDATE */
+function updateStudent(){
+
+if(editIndex === -1){
+alert("Select student first!");
+return;
+}
+
+let updated = getData();
+updated.image = imageData || students[editIndex].image;
+
+students[editIndex] = updated;
+
+localStorage.setItem("students",JSON.stringify(students));
+
+alert("Updated!");
+clearForm();
+editIndex = -1;
+display();
+}
+
+/* REFRESH */
+function refreshStudents(){
+students = JSON.parse(localStorage.getItem("students")) || [];
+display();
+alert("Refreshed!");
+}
+
+/* DATA */
+function getData(){
+return {
+name:name.value.trim(),
+id:id.value.trim(),
+image:imageData,
+
+dept:dept.value,
+subject:subject.value,
+batch:batch.value,
+year:year.value,
+teacher:teacher.value,
+
+assignments:[
+Number(a1.value||0),
+Number(a2.value||0),
+Number(a3.value||0),
+Number(a4.value||0)
+],
+
+quizzes:[
+Number(q1.value||0),
+Number(q2.value||0),
+Number(q3.value||0),
+Number(q4.value||0)
+],
+
+mid:Number(mid.value||0),
+final:Number(final.value||0)
+};
+}
+
+/* DISPLAY */
+function display(){
+
+let html = `
+<tr>
+<th>Photo</th>
+<th>Name</th>
+<th>ID</th>
+<th>Total</th>
+<th>Edit</th>
+<th>Delete</th>
+</tr>`;
+
+students.forEach((s,i)=>{
+
+let total =
+s.assignments.reduce((a,b)=>a+b,0) +
+s.quizzes.reduce((a,b)=>a+b,0) +
+s.mid + s.final;
+
+html += `
+<tr>
+<td>${s.image ? `<img src="${s.image}">` : "No"}</td>
+<td>${s.name}</td>
+<td>${s.id}</td>
+<td>${total}</td>
+<td><button onclick="editStudent(${i})">Edit</button></td>
+<td><button onclick="deleteStudent(${i})" style="background:red;color:white;">Delete</button></td>
+</tr>`;
+});
+
+table.innerHTML = html;
+}
+
+/* EDIT */
+function editStudent(i){
+let s = students[i];
+editIndex = i;
+imageData = s.image || "";
+
+name.value = s.name;
+id.value = s.id;
+dept.value = s.dept;
+subject.value = s.subject;
+batch.value = s.batch;
+year.value = s.year;
+teacher.value = s.teacher;
+
+a1.value = s.assignments[0];
+a2.value = s.assignments[1];
+a3.value = s.assignments[2];
+a4.value = s.assignments[3];
+
+q1.value = s.quizzes[0];
+q2.value = s.quizzes[1];
+q3.value = s.quizzes[2];
+q4.value = s.quizzes[3];
+
+mid.value = s.mid;
+final.value = s.final;
+}
+
+/* DELETE */
+function deleteStudent(i){
+if(confirm("Delete student?")){
+students.splice(i,1);
+localStorage.setItem("students",JSON.stringify(students));
+display();
+}
+}
+
+function clearForm(){
+name.value="";
+id.value="";
+dept.value="";
+subject.value="";
+batch.value="";
+year.value="";
+teacher.value="";
+a1.value=a2.value=a3.value=a4.value="";
+q1.value=q2.value=q3.value=q4.value="";
+mid.value="";
+final.value="";
+imageInput.value="";
+imageData="";
+}
+
+/* SEARCH (PRO UI) */
+function searchStudent(){
+
+let s = students.find(x=>x.id==searchId.value);
+
+if(!s){
+result.innerHTML=`<h3 style="color:red;">Student Not Found</h3>`;
+return;
+}
+
+let total =
+s.assignments.reduce((a,b)=>a+b,0) +
+s.quizzes.reduce((a,b)=>a+b,0) +
+s.mid + s.final;
+
+result.innerHTML = `
+<div style="
+max-width:700px;
+margin:auto;
+background:#fff;
+color:#1a1a1a;
+padding:25px;
+border-radius:18px;
+box-shadow:0 12px 30px rgba(0,0,0,0.25);
+text-align:left;
+">
+
+<div style="text-align:center;">
+<img src="${s.image || ''}" style="width:110px;height:110px;border-radius:50%;">
+<h2 style="color:#4a00e0;">${s.name}</h2>
+<p><b>ID:</b> ${s.id}</p>
+</div>
+
+<hr>
+
+<h3>🏫 Academic Info</h3>
+<p>Department: ${s.dept}</p>
+<p>Subject: ${s.subject}</p>
+<p>Batch: ${s.batch}</p>
+<p>Year: ${s.year}</p>
+<p>Teacher: ${s.teacher}</p>
+
+<hr>
+
+<h3>📝 Marks</h3>
+<p>Assignments: ${s.assignments.join(", ")}</p>
+<p>Quizzes: ${s.quizzes.join(", ")}</p>
+<p>Mid: ${s.mid}</p>
+<p>Final: ${s.final}</p>
+
+<h2 style="
+text-align:center;
+background:linear-gradient(to right,#4a00e0,#8e2de2);
+color:white;
+padding:12px;
+border-radius:10px;
+">
+🏆 TOTAL: ${total}
+</h2>
+
+</div>
+`;
+}
+
+</script>
+
+</body>
+</html>
